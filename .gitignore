@@ -1,1 +1,4 @@
 /data
+.R*
+*.Rproj
+.streamlit/secrets.toml
