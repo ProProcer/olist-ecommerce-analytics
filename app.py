@@ -185,8 +185,25 @@ fct_orders = fct_orders[
         time_period.to_timestamp() + DateOffset(freq_map[sampling_freq]['n_months']), inclusive= 'left')
 ]
 
-delivery_time_fig = px.box(fct_orders, x = 'total_delivery_days', y = 'is_on_time', orientation = 'h')
-delivery_time_fig.update_layout(
-    height = 250
-)
+def plot_delivery_time(fct_orders, is_split):
+    delivery_time_fig = px.box(
+        fct_orders, 
+        x = 'total_delivery_days', 
+        y = 'is_on_time' if is_split else None, 
+        orientation = 'h'
+    )
+    delivery_time_fig.update_layout(
+        height = 270
+    )
+    delivery_time_fig.update_xaxes(
+        fixedrange = True   
+    )
+    delivery_time_fig.update_yaxes(
+        fixedrange = True
+    )
+    return delivery_time_fig
+
+is_split_by_on_time = st.toggle("Split by 'On Time' vs. 'Late'", value = True)
+
+delivery_time_fig = plot_delivery_time(fct_orders, is_split_by_on_time)
 st.write(delivery_time_fig)
