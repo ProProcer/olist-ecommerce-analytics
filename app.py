@@ -49,8 +49,12 @@ time_period = st.selectbox(
     options = df.index.sort_values(ascending = False)
 )
 
-def get_delivery_time(start, duration = 'monthly'):
-    pass
+def get_fct_orders():
+    query = f"""
+        SELECT * FROM gold.fct_orders
+    """
+    df = conn.query(query)
+    return df
 
 # On time delivery rate figure
 def plot_otd_rate(df):
@@ -170,8 +174,15 @@ def plot_otd_rate(df):
     
     return otd_rate_fig
 
-
-delivery_time_fig = px.box(df, x = 'total_delivery_days', orientation = 'h')
 otd_rate_fig = plot_otd_rate(df)
 st.write(otd_rate_fig)
+
+fct_orders = get_fct_orders()
+fct_orders = fct_orders[
+    fct_orders.order_approved_at.between(
+        time_period.to_timestamp(), 
+        time_period.to_timestamp() + DateOffset(freq_map[sampling_freq]['n_months']), inclusive= 'left')
+]
+
+delivery_time_fig = px.box(fct_orders, x = 'total_delivery_days', orientation = 'h')
 st.write(delivery_time_fig)
