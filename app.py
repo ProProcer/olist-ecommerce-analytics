@@ -60,6 +60,7 @@ def get_fct_orders():
 def plot_otd_rate(df):
     df['on_time_delivery_perc'] = df['on_time_delivery_rate'] * 100
 
+    # categorize the current performance
     current_timestamp = df.loc[time_period, 'timestamp']
     if df.loc[time_period, 'on_time_delivery_rate'] > 0.95: #excellent case
         marker_line_color = 'rgba(28, 180, 27, 0.6)'
@@ -71,7 +72,7 @@ def plot_otd_rate(df):
         marker_line_color = '#000002'
         font_color = None
     
-    otd_rate_fig = px.line(
+    otd_rate_fig = px.line( # base figure
         df, 
         x = 'timestamp', 
         y = 'on_time_delivery_perc',
@@ -89,12 +90,12 @@ def plot_otd_rate(df):
 
     n_months = freq_map[sampling_freq]['n_months']
 
-    x_ticks = pd.Series(np.concatenate(
+    x_ticks = pd.Series(np.concatenate( # prepare for changing xticks (cosmetic)
         (df.timestamp,
         df.timestamp.max() + DateOffset(months = n_months) * np.array([1, 2, 3]))
     ))
 
-    otd_rate_fig.update_xaxes(
+    otd_rate_fig.update_xaxes( # limit range and no panning
         range = (
             current_timestamp - DateOffset(months = n_months * 2, days = 1/3 * 30 * n_months), 
             current_timestamp + DateOffset(months = n_months * 2, days = 1/3 * 30 * n_months)
@@ -105,7 +106,7 @@ def plot_otd_rate(df):
         title_text = None
     )
 
-    otd_rate_fig.update_yaxes(
+    otd_rate_fig.update_yaxes( # limit range and no panning
         range = (min(df.loc[time_period, 'on_time_delivery_perc'] - 1, 85), 100),
         fixedrange = True,
         title_text = None
@@ -113,12 +114,12 @@ def plot_otd_rate(df):
     
     otd_rate_fig.add_traces(
         (
-        go.Scatter(
+        go.Scatter( # dot to emphasize on the current time
             x = [current_timestamp],
             y = [df.loc[time_period, 'on_time_delivery_perc']],
             marker_color = "#000001"
         ),
-        go.Scatter(
+        go.Scatter( # outer ring on the dot to further emphasize
             x = [current_timestamp],
             y = [df.loc[time_period, 'on_time_delivery_perc']],
             marker_size = 16,
@@ -149,6 +150,7 @@ def plot_otd_rate(df):
         annotation_text = 'Underperforming',
         annotation_position = 'left top'
     )
+
     if ((time_period - 1 not in df.index) or
         (df.loc[time_period, 'on_time_delivery_rate'] ==  
         df.loc[time_period - 1, 'on_time_delivery_rate'])):
@@ -158,7 +160,6 @@ def plot_otd_rate(df):
         symbol = '▲'
     else:
         symbol = '▼'
-    
 
     # the percentage
     otd_rate_fig.add_annotation(
@@ -184,5 +185,8 @@ fct_orders = fct_orders[
         time_period.to_timestamp() + DateOffset(freq_map[sampling_freq]['n_months']), inclusive= 'left')
 ]
 
-delivery_time_fig = px.box(fct_orders, x = 'total_delivery_days', orientation = 'h')
+delivery_time_fig = px.box(fct_orders, x = 'total_delivery_days', y = 'is_on_time', orientation = 'h')
+delivery_time_fig.update_layout(
+    height = 250
+)
 st.write(delivery_time_fig)
