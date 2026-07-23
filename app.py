@@ -190,9 +190,17 @@ def plot_delivery_time(fct_orders, is_split):
         fixedrange = True,
         title_text = "Duration (days)"
     )
+
     delivery_time_fig.update_yaxes(
-        fixedrange = True
+        fixedrange = True,
+        title_text = None
     )
+    if is_split:
+        delivery_time_fig.update_yaxes(
+            tickvals = [0, 1],
+            ticktext = ['Late', 'On Time']
+        )
+
     return delivery_time_fig
 
 def plot_stacked_bar(categories : dict):
