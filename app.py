@@ -183,11 +183,12 @@ def plot_delivery_time(fct_orders, is_split):
         orientation = 'h'
     )
     delivery_time_fig.update_layout(
-        title_text = 'Total Delivery Time (days)',
+        title_text = 'Total Delivery Time',
         height = 270
     )
     delivery_time_fig.update_xaxes(
-        fixedrange = True   
+        fixedrange = True,
+        title_text = "Duration (days)"
     )
     delivery_time_fig.update_yaxes(
         fixedrange = True
