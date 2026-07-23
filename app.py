@@ -175,16 +175,6 @@ def plot_otd_rate(df):
     
     return otd_rate_fig
 
-otd_rate_fig = plot_otd_rate(df)
-st.write(otd_rate_fig)
-
-fct_orders = get_fct_orders()
-fct_orders = fct_orders[
-    fct_orders.order_approved_at.between(
-        time_period.to_timestamp(), 
-        time_period.to_timestamp() + DateOffset(freq_map[sampling_freq]['n_months']), inclusive= 'left')
-]
-
 def plot_delivery_time(fct_orders, is_split):
     delivery_time_fig = px.box(
         fct_orders, 
@@ -193,6 +183,7 @@ def plot_delivery_time(fct_orders, is_split):
         orientation = 'h'
     )
     delivery_time_fig.update_layout(
+        title_text = 'Total Delivery Time (days)',
         height = 270
     )
     delivery_time_fig.update_xaxes(
@@ -203,7 +194,65 @@ def plot_delivery_time(fct_orders, is_split):
     )
     return delivery_time_fig
 
-is_split_by_on_time = st.toggle("Split by 'On Time' vs. 'Late'", value = True)
+def plot_stacked_bar(categories : dict):
+    colors = px.colors.qualitative.Safe
+    assert len(categories) <= len(colors)
 
-delivery_time_fig = plot_delivery_time(fct_orders, is_split_by_on_time)
-st.write(delivery_time_fig)
+    bars = []
+    legends = []
+    for i, (cat, prop) in enumerate(categories.items()):
+        bars.append(f'<div style="background-color: {colors[i]}; width: {prop * 100:.2f}%;"></div>')
+        legends.append(f"""
+            <div>
+                <span style="width: 8pt; height: 8pt; display: 
+                inline-block; background-color: {colors[i]}; border-radius: 20%;"></span> 
+                {cat}
+            </div>
+        """)
+    html_code = f"""
+    <style>
+    .bar-container {{
+        width: 100%;
+        height: 7pt;
+        display: flex;
+        justify-content: space-between;
+        border-radius: 10px;
+        overflow: hidden;
+    }}
+    .legend-container{{
+        width: 100%;
+        display: flex;
+        justify-content: space-around;
+    }}
+    </style>
+    <div class="bar-container">{"".join(bars)}</div>
+    <div class="legend-container">{"".join(legends)}</div>
+    """
+    st.html(html_code)
+
+otd_rate_fig = plot_otd_rate(df)
+with st.container(border = True):
+    st.write(otd_rate_fig)
+
+fct_orders = get_fct_orders()
+fct_orders = fct_orders[
+    fct_orders.order_approved_at.between(
+        time_period.to_timestamp(), 
+        time_period.to_timestamp() + DateOffset(freq_map[sampling_freq]['n_months']), inclusive= 'left')
+]
+
+
+
+with st.container(border = True):
+    st.toggle(
+    "Split View",
+    key="is_split_by_on_time",
+    help="Toggle split by On Time vs. Late",
+    )
+
+    # Generate and display the figure below the header
+    delivery_time_fig = plot_delivery_time(
+        fct_orders, st.session_state.is_split_by_on_time
+    )
+    st.write(delivery_time_fig)
+    plot_stacked_bar({'blue' : 0.3, 'red' : 0.4, '34' : 0.3})
