@@ -215,7 +215,7 @@ def plot_stacked_bar(categories : dict):
             <div>
                 <span style="width: 8pt; height: 8pt; display: 
                 inline-block; background-color: {colors[i]}; border-radius: 20%;"></span> 
-                {cat}
+                <span style="font-size: 0.85rem;">{cat}</span>
             </div>
         """)
     html_code = f"""
@@ -254,9 +254,10 @@ fct_orders = fct_orders[
 
 with st.container(border = True):
     st.toggle(
-    "Split View",
-    key="is_split_by_on_time",
-    help="Toggle split by On Time vs. Late",
+        "Split View",
+        value = True,
+        key="is_split_by_on_time",
+        help="Toggle split by On Time vs. Late",
     )
 
     # Generate and display the figure below the header
@@ -264,4 +265,28 @@ with st.container(border = True):
         fct_orders, st.session_state.is_split_by_on_time
     )
     st.write(delivery_time_fig)
-    plot_stacked_bar({'blue' : 0.3, 'red' : 0.4, '34' : 0.3})
+
+    if not st.session_state.is_split_by_on_time:
+        handling_days = fct_orders.handling_days.mean()
+        transit_days = fct_orders.transit_days.mean()
+        total_delivery_days = fct_orders.total_delivery_days.mean()
+        plot_stacked_bar(
+            {f'Handling ({handling_days:.1f} days)' : handling_days / total_delivery_days, 
+             f'Transit ({transit_days:.1f} days)' : transit_days / total_delivery_days}
+        )
+    else:
+        agg_fct_orders = fct_orders.groupby('is_on_time')[['handling_days', 'transit_days', 'total_delivery_days']].mean()
+
+        # On Time
+        st.write(f'On Time Delivery ({len(fct_orders[fct_orders.is_on_time == 1])} orders)')
+        plot_stacked_bar(
+            {f'Handling ({agg_fct_orders.loc[1, 'handling_days']:.1f} days)' : agg_fct_orders.loc[1, 'handling_days'] / agg_fct_orders.loc[1, 'total_delivery_days'], 
+            f'Transit ({agg_fct_orders.loc[1, 'transit_days']:.1f} days)' : agg_fct_orders.loc[1, 'transit_days'] / agg_fct_orders.loc[1, 'total_delivery_days']}
+        )
+
+        st.write(f'Late Delivery ({len(fct_orders[fct_orders.is_on_time == 0])} orders)')
+        # Late
+        plot_stacked_bar(
+            {f'Handling ({agg_fct_orders.loc[0, 'handling_days']:.1f} days)' : agg_fct_orders.loc[0, 'handling_days'] / agg_fct_orders.loc[0, 'total_delivery_days'], 
+            f'Transit ({agg_fct_orders.loc[0, 'transit_days']:.1f} days)' : agg_fct_orders.loc[0, 'transit_days'] / agg_fct_orders.loc[0, 'total_delivery_days']}
+        )
