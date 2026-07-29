@@ -36,19 +36,6 @@ def get_logistics_metrics(freq = 'monthly'):
     df.set_index('time_period', inplace = True)
     return df
 
-sampling_freq = st.selectbox(
-    label = 'Select the Frequency',
-    options = ('Monthly', 'Quarterly', 'Yearly')
-)
-
-df = get_logistics_metrics(sampling_freq)
-df['timestamp'] = df.index.to_timestamp()
-
-time_period = st.selectbox(
-    label = 'Select Time Period',
-    options = df.index.sort_values(ascending = False)
-)
-
 def get_fct_orders():
     query = f"""
         SELECT * FROM gold.fct_orders
@@ -57,7 +44,7 @@ def get_fct_orders():
     return df
 
 # On time delivery rate figure
-def plot_otd_rate(df):
+def plot_otd_rate(df, time_period):
     df['on_time_delivery_perc'] = df['on_time_delivery_rate'] * 100
 
     # categorize the current performance
@@ -203,8 +190,10 @@ def plot_delivery_time(fct_orders, is_split):
 
     return delivery_time_fig
 
-def plot_stacked_bar(categories : dict):
-    colors = px.colors.qualitative.Safe
+def plot_stacked_bar(categories : dict, colors = None):
+    if colors == None:
+        colors = px.colors.qualitative.Safe
+
     assert len(categories) <= len(colors)
 
     bars = []
@@ -215,14 +204,14 @@ def plot_stacked_bar(categories : dict):
             <div>
                 <span style="width: 8pt; height: 8pt; display: 
                 inline-block; background-color: {colors[i]}; border-radius: 20%;"></span> 
-                <span style="font-size: 0.85rem;">{cat}</span>
+                <span style="font-size: 0.75rem;">{cat}</span>
             </div>
         """)
     html_code = f"""
     <style>
     .bar-container {{
         width: 100%;
-        height: 7pt;
+        height: 0.5rem;
         display: flex;
         justify-content: space-between;
         border-radius: 10px;
@@ -239,15 +228,28 @@ def plot_stacked_bar(categories : dict):
     """
     st.html(html_code)
 
-otd_rate_fig = plot_otd_rate(df)
+
+sampling_freq = st.selectbox(
+    label = 'Select the Frequency',
+    options = ('Monthly', 'Quarterly', 'Yearly')
+)
+
+df = get_logistics_metrics(sampling_freq)
+df['timestamp'] = df.index.to_timestamp()
+
+time_period = st.selectbox(
+    label = 'Select Time Period',
+    options = df.index.sort_values(ascending = False)
+)
+
+
+otd_rate_fig = plot_otd_rate(df, time_period)
 with st.container(border = True):
     st.write(otd_rate_fig)
 
 fct_orders = get_fct_orders()
 fct_orders = fct_orders[
-    fct_orders.order_approved_at.between(
-        time_period.to_timestamp(), 
-        time_period.to_timestamp() + DateOffset(freq_map[sampling_freq]['n_months']), inclusive= 'left')
+    fct_orders.order_approved_at.dt.to_period(freq_map[sampling_freq]['period']) == time_period
 ]
 
 
@@ -259,7 +261,6 @@ with st.container(border = True):
         key="is_split_by_on_time",
         help="Toggle split by On Time vs. Late",
     )
-
     # Generate and display the figure below the header
     delivery_time_fig = plot_delivery_time(
         fct_orders, st.session_state.is_split_by_on_time
@@ -275,18 +276,21 @@ with st.container(border = True):
              f'Transit ({transit_days:.1f} days)' : transit_days / total_delivery_days}
         )
     else:
+        
         agg_fct_orders = fct_orders.groupby('is_on_time')[['handling_days', 'transit_days', 'total_delivery_days']].mean()
 
-        # On Time
-        st.write(f'On Time Delivery ({len(fct_orders[fct_orders.is_on_time == 1])} orders)')
-        plot_stacked_bar(
-            {f'Handling ({agg_fct_orders.loc[1, 'handling_days']:.1f} days)' : agg_fct_orders.loc[1, 'handling_days'] / agg_fct_orders.loc[1, 'total_delivery_days'], 
-            f'Transit ({agg_fct_orders.loc[1, 'transit_days']:.1f} days)' : agg_fct_orders.loc[1, 'transit_days'] / agg_fct_orders.loc[1, 'total_delivery_days']}
-        )
+        st.html(f'<span style="font-size:0.85em;">On Time Delivery ({len(fct_orders[fct_orders.is_on_time == 1])} orders)</span>')
+        if 1 in agg_fct_orders.index:        
+            plot_stacked_bar(
+                {f'Handling ({agg_fct_orders.loc[1, 'handling_days']:.1f} days)' : agg_fct_orders.loc[1, 'handling_days'] / agg_fct_orders.loc[1, 'total_delivery_days'], 
+                f'Transit ({agg_fct_orders.loc[1, 'transit_days']:.1f} days)' : agg_fct_orders.loc[1, 'transit_days'] / agg_fct_orders.loc[1, 'total_delivery_days']}
+            )
 
-        st.write(f'Late Delivery ({len(fct_orders[fct_orders.is_on_time == 0])} orders)')
-        # Late
-        plot_stacked_bar(
-            {f'Handling ({agg_fct_orders.loc[0, 'handling_days']:.1f} days)' : agg_fct_orders.loc[0, 'handling_days'] / agg_fct_orders.loc[0, 'total_delivery_days'], 
-            f'Transit ({agg_fct_orders.loc[0, 'transit_days']:.1f} days)' : agg_fct_orders.loc[0, 'transit_days'] / agg_fct_orders.loc[0, 'total_delivery_days']}
-        )
+        st.html(f'<span style="font-size:0.85em;">Late Delivery ({len(fct_orders[fct_orders.is_on_time == 0])} orders)</span>')
+
+        if 0 in agg_fct_orders.index:
+            # Late
+            plot_stacked_bar(
+                {f'Handling ({agg_fct_orders.loc[0, 'handling_days']:.1f} days)' : agg_fct_orders.loc[0, 'handling_days'] / agg_fct_orders.loc[0, 'total_delivery_days'], 
+                f'Transit ({agg_fct_orders.loc[0, 'transit_days']:.1f} days)' : agg_fct_orders.loc[0, 'transit_days'] / agg_fct_orders.loc[0, 'total_delivery_days']}
+            )
