@@ -2,3 +2,4 @@
 .R*
 *.Rproj
 .streamlit/secrets.toml
+.env
