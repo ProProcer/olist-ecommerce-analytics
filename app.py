@@ -25,7 +25,16 @@ def get_logistics_metrics(freq = 'monthly'):
         DATE_TRUNC('{params['trunc']}', year_month) AS time_period,  
         SUM(on_time_orders) / SUM(total_orders) AS on_time_delivery_rate, 
         (SUM(handling_days * total_orders) / SUM(total_orders)) AS handling_days,
-        (SUM(total_delivery_days * total_orders) / SUM(total_orders)) AS total_delivery_days
+        (SUM(total_delivery_days * total_orders) / SUM(total_orders)) AS total_delivery_days,
+        SUM(total_freight_value::NUMERIC) / NULLIF(SUM(total_freight_weight_kg), 0) AS freight_rate_by_weight,
+        SUM(total_freight_value::NUMERIC) / NULLIF(SUM(total_freight_volume_m3), 0) AS freight_rate_by_volume,
+        SUM(approved_count) AS approved_count,
+        SUM(processing_count) AS processing_count,
+        SUM(invoiced_count) AS invoiced_count,
+        SUM(shipped_count) AS shipped_count,
+        SUM(delivered_count) AS delivered_count,
+        SUM(unavailable_count) AS unavailable_count,
+        SUM(canceled_count) AS canceled_count
         FROM gold.monthly_logistics_metrics  
         GROUP BY DATE_TRUNC('{params['trunc']}', year_month)  
         ORDER BY time_period;
@@ -294,3 +303,77 @@ with st.container(border = True):
                 {f'Handling ({agg_fct_orders.loc[0, 'handling_days']:.1f} days)' : agg_fct_orders.loc[0, 'handling_days'] / agg_fct_orders.loc[0, 'total_delivery_days'], 
                 f'Transit ({agg_fct_orders.loc[0, 'transit_days']:.1f} days)' : agg_fct_orders.loc[0, 'transit_days'] / agg_fct_orders.loc[0, 'total_delivery_days']}
             )
+
+col1, col2 = st.columns(2)
+
+with col1:
+    
+    with st.container(border = True):
+        st.markdown("###### Freight Rate Efficiency")
+
+        rate_by_weight_delta = (
+            round(
+                df.loc[time_period, 'freight_rate_by_weight'] - 
+                df.loc[time_period - 1, 'freight_rate_by_weight'], 3
+            )
+            if time_period - 1 in df.index else 'Not available'
+        )
+
+        rate_by_volume_delta = (
+            round(
+                df.loc[time_period, 'freight_rate_by_volume'] - 
+                df.loc[time_period - 1, 'freight_rate_by_volume'], 3
+            )
+            if time_period - 1 in df.index else 'Not available'
+        )
+        
+        st.metric(
+            label="Rate by Weight", 
+            value=f"R$ {df.loc[time_period, 'freight_rate_by_weight']:.2f} / kg",
+            delta= rate_by_weight_delta,
+            delta_color = 'inverse'
+        )
+    
+        st.metric(
+            label="Rate by Volume", 
+            value=f"R$ {df.loc[time_period, 'freight_rate_by_volume']:.2f} / m³",
+            delta = rate_by_volume_delta,
+            delta_color = 'inverse'
+        )
+with col2:
+    with st.container(border = True):
+        metrics_sr = df.loc[time_period]
+        cols = pd.Series([
+            "approved_count",
+            "processing_count",
+            "invoiced_count",
+            "shipped_count",
+            "delivered_count",
+            "unavailable_count",
+            "canceled_count"
+        ])
+
+        total_approved_orders = metrics_sr[cols].sum()
+        delivery_counts_data = (
+            df.loc[time_period, cols]
+            .drop('delivered_count')
+            .to_frame('count')
+            .rename(index = pd.Series(cols.str[:-6].to_numpy(), index = cols))
+            .reset_index(names = 'order_status')
+        )
+
+        fig = px.bar(
+            data_frame = delivery_counts_data, 
+            x = 'order_status',
+            y = 'count',
+            title = f"Non-Delivered Order Breakdown"
+        )
+        fig.update_layout(
+            height = 350,
+            title_subtitle_text = f'Count: {int(total_approved_orders - metrics_sr.delivered_count)}/{int(total_approved_orders)}'
+        )
+        fig.update_xaxes(
+            title_text = None
+        )
+
+        st.write(fig)
