@@ -8,7 +8,6 @@ from pathlib import Path
 load_dotenv()
 
 def export_sql_to_csv(sql_path, out_path):
-    print('helol')
     DB_URL = os.getenv('DB_URL')
     engine = create_engine(DB_URL)
     query = open(sql_path).read()
@@ -25,6 +24,5 @@ if __name__ == '__main__':
     if out_path.is_dir():
         out_path = (out_path / Path(args.input).name).with_suffix('.csv')
     out_path.parent.mkdir(parents = True, exist_ok = True)
-    print('helo0')
 
     export_sql_to_csv(sql_path = args.input, out_path = out_path)
