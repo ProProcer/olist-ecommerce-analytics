@@ -1,6 +1,8 @@
 -- python scripts/export_dataset.py -i sql/03_build_order_delivery_dataset.sql -o data/processed/order_delivery_dataset.csv
 SELECT 
 	o.order_id AS order_id,
+	o.order_approved_at,
+	o.order_delivered_carrier_date,
 	ANY_VALUE(cg.geolocation_lat) AS customer_lat,
 	ANY_VALUE(cg.geolocation_lng) AS customer_lng,
 	ANY_VALUE(COALESCE(cg.geolocation_state, c.customer_state)) AS customer_state,
