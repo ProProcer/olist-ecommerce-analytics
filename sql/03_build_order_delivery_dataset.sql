@@ -1,3 +1,4 @@
+-- python scripts/export_dataset.py -i sql/03_build_order_delivery_dataset.sql -o data/processed/order_delivery_datset.csv
 SELECT 
 	o.order_id AS order_id,
 	ANY_VALUE(cg.geolocation_lat) AS customer_lat,
