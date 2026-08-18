@@ -12,7 +12,7 @@ def export_sql_to_csv(sql_path, out_path):
     engine = create_engine(DB_URL)
     query = open(sql_path).read()
     df = pd.read_sql_query(query, engine)
-    df.to_csv(out_path)
+    df.to_csv(out_path, index = False)
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
