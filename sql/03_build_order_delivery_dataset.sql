@@ -17,6 +17,8 @@ SELECT
 	COUNT(oi.order_item_id) item_count,
 	SUM(p.product_length_cm * p.product_height_cm * p.product_width_cm) / 1000000.0 AS volume_m3,
 	SUM(p.product_weight_g) / 1000.0 AS weight_kg,
+	SUM(oi.price) AS total_price,
+	SUM(oi.freight_value) AS total_freight_value,
 	EXTRACT (EPOCH FROM AVG(order_delivered_carrier_date - order_approved_at)) / 86400 AS handling_days,
 	EXTRACT (EPOCH FROM AVG(order_delivered_customer_date - order_delivered_carrier_date)) / 86400 AS transit_days,
 	EXTRACT (EPOCH FROM ANY_VALUE(order_delivered_customer_date - order_approved_at)) / 86400 AS total_delivery_days
