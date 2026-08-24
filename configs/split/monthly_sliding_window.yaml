@@ -1,0 +1,5 @@
+_target_: src.evaluation.splitters.SlidingWindowSplitter
+period_train: 3
+period_test: 1
+timestamp: ${data.timestamp}
+freq: 'M'
