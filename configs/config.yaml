@@ -1,2 +1,13 @@
 defaults:
 - data: handling_days
+- model: zscore
+- split: monthly_sliding_window
+- _self_
+
+features:
+  _target_: src.features.get_feature_transformer
+  
+  engineering: 
+    dow: 
+      _target_: src.features.engineering.dow
+      cols: ["${data.timestamp}"]
