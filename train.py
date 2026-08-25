@@ -7,6 +7,7 @@ from hydra.utils import instantiate, UNSAFE_ALLOW_ALL_TARGETS
 import numpy as np
 from collections import defaultdict
 from sklearn import metrics
+from src.utils.resolvers import register_custom_resolvers
 
 
 def aggregate_metrics(results):
@@ -19,13 +20,13 @@ def aggregate_metrics(results):
 
 @hydra.main(config_path="configs", config_name="config")
 def main(cfg: DictConfig):
+    register_custom_resolvers()
+
     df = load_data(
         path = cfg.data.path, 
-        timestamp = cfg.data.timestamp, 
-        numerical_cols = list(cfg.data.numerical_cols), 
-        categorical_cols = list(cfg.data.categorical_cols)
+        transforms = cfg.transforms
     )
-
+    
     feature_transformer = instantiate(cfg.features, _target_whitelist_ = UNSAFE_ALLOW_ALL_TARGETS)
     
     model = instantiate(cfg.model, _target_whitelist_ = UNSAFE_ALLOW_ALL_TARGETS)
