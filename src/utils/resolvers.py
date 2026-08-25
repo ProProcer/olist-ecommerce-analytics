@@ -9,4 +9,4 @@ def add(*args):
     return result
 
 def register_custom_resolvers():
-    OmegaConf.register_new_resolver('add', add, replace = True)
+    OmegaConf.register_resolver('add', add, replace = True)
