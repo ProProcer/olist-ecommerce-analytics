@@ -1,0 +1,6 @@
+_target_: src.features.get_feature_transformer
+
+engineering: 
+  dow: 
+    _target_: src.features.engineering.dow
+    cols: ["${data.timestamp}"]
