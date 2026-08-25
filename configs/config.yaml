@@ -1,30 +1,7 @@
 defaults:
 - data: handling_days
+- features: dow
 - model: zscore
 - split: monthly_sliding_window
+- validator: cross_validator
 - _self_
-
-transforms:
-- _target_: src.data.transforms.select_columns
-  _partial_: true
-  cols: "${add : ${data.numerical_cols}, ${data.categorical_cols}, [${data.timestamp}]}"
-- _target_: src.data.transforms.parse_datetime
-  _partial_: true
-  cols: ["${data.timestamp}"]
-- _target_: src.data.transforms.cast_dtypes
-  _partial_: true
-  cols: "${data.numerical_cols}"
-  dtype: "float32"
-- _target_: src.data.transforms.cast_dtypes
-  _partial_: true
-  cols: "${data.categorical_cols}"
-  dtype: "category"
-
-
-features:
-  _target_: src.features.get_feature_transformer
-  
-  engineering: 
-    dow: 
-      _target_: src.features.engineering.dow
-      cols: ["${data.timestamp}"]
