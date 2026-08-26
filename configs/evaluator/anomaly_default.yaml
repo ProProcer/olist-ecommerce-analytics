@@ -1,0 +1,10 @@
+_target_: src.evaluation.evaluator.MetricEvaluator
+primary_metric: "rmse"
+greater_is_better: false
+metrics:
+  rmse:
+    _target_: src.evaluation.metrics.rmse
+    _partial_: true
+  outlier_fraction:
+    _target_: src.evaluation.metrics.outlier_fraction
+    _partial_: true

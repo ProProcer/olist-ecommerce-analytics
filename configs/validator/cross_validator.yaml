@@ -2,4 +2,5 @@ _target_: src.evaluation.validator.CrossValidator
 model: "${model}"
 splitter: "${split}"
 feature_transformer: "${features}"
-target: "${data.target}"
+target_col: "${data.target}"
+evaluator: "${evaluator}"
