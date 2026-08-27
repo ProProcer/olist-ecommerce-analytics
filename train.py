@@ -10,15 +10,6 @@ from sklearn import metrics
 from src.utils.resolvers import register_custom_resolvers
 from src.evaluation.validator import CrossValidator
 
-
-def aggregate_metrics(results):
-    return  {
-        'outlier_frac' : np.average(results['outlier_frac'], weights = results['N']).item(),
-        'rmse_outlier_frac' : np.sqrt(((results['outlier_frac'] - 0.05)**2).mean()).item(),
-        'weighted_rmse_outlier_frac' : np.sqrt(np.average((results['outlier_frac'] - 0.05)**2, weights = results['N'])).item(),
-        'rmse_center' : np.sqrt(np.average(results['rmse_center'] ** 2, weights = results['N'])).item()
-    }
-
 @hydra.main(config_path="configs", config_name="config")
 def main(cfg: DictConfig):
     register_custom_resolvers()
