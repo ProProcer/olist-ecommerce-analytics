@@ -1,2 +1,2 @@
-_target_: src.models.zscore.ZScore
+_target_: src.models.group.ZScore
 alpha: 0.05

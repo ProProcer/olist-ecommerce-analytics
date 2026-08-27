@@ -1,4 +1,5 @@
 from src.evaluation.metrics import outlier_fraction
+from sklearn.base import clone
 
 class CrossValidator:
     def __init__(
@@ -24,8 +25,9 @@ class CrossValidator:
             test_df = df.loc[test_idx]
             X_test = self.feature_transformer.transform(test_df)
             y_test = test_df[self.target_col]
-    
-            self.model.fit(X_train, y_train)
-            preds = self.model.predict(X_test, y_test)
+
+            fold_model = clone(self.model)
+            fold_model.fit(X_train, y_train)
+            preds = fold_model.predict(X_test)
             print(self.evaluator.compute(y_test, preds))
         return None
