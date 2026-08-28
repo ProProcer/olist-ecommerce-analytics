@@ -81,11 +81,11 @@ class CrossValidator:
 
         oof_predictions = pred_class(**oof_preds_buffer)
         
-        mean_metrics = defaultdict(list)
-        std_metrics = defaultdict(list)
+        mean_metrics = {}
+        std_metrics = {}
         for k in fold_metrics[0].keys():
-            mean_metrics[k].append(np.mean([val[k] for val in fold_metrics]))
-            std_metrics[k].append(np.std([val[k] for val in fold_metrics]))
+            mean_metrics[k] = np.mean([val[k] for val in fold_metrics]).item()
+            std_metrics[k] = np.std([val[k] for val in fold_metrics]).item()
             
         return ValidationResult(
             oof_metrics = oof_metrics,
