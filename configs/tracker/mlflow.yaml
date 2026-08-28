@@ -1,0 +1,2 @@
+_target_: src.tracking.mlflow_tracker.MLflowTracker
+experiment_name: "${experiment_name}"

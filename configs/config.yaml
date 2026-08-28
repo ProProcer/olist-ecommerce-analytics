@@ -5,4 +5,8 @@ defaults:
 - split: monthly_sliding_window
 - validator: cross_validator
 - evaluator: anomaly_default
+- tracker: mlflow
 - _self_
+
+experiment_name: "handing_days_anomaly_detection"
+run_name: "dow_zscore"
