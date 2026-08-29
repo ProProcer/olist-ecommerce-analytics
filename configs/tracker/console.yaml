@@ -1,0 +1,2 @@
+_target_: src.tracking.console_tracker.ConsoleTracker
+verbose: true
