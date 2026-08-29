@@ -1,0 +1,7 @@
+_target_: src.models.wrappers.TransformedTargetEstimator
+model: 
+  _target_: src.models.group.TScore
+  alpha: 0.05
+transformer:
+  _target_: sklearn.preprocessing.PowerTransformer
+  method: 'box-cox'

@@ -1,0 +1,7 @@
+# @package _global_
+defaults:
+- override /model: boxcox_tscore
+- _self_
+
+experiment_name: "handing_days_anomaly_detection"
+run_name: "dow_boxcox_tscore"
