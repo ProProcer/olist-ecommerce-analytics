@@ -62,3 +62,39 @@ class TScore(BaseEstimator):
             center = preds.center.to_numpy(),
             upper_bound = preds.upper_bound.to_numpy()
         )
+
+class EmpiricalQuantile(BaseEstimator):
+    def __init__(self, alpha):
+        self.alpha = alpha
+
+    def fit(self, X, y):
+        X = np.asarray(X)
+        y = pd.Series(y)
+
+        keys = []
+        upper_bounds = []
+        centers = []
+
+        for key, ser in y.groupby(list(X.T)):
+            keys.append(key)
+            h = 1 + (len(ser) - 1) * 0.95
+            g = h - int(h)
+            sorted_ser = np.sort(ser)
+
+            centers.append(np.mean(ser))
+            upper_bounds.append(sorted_ser[int(h)] + (sorted_ser[int(h) + 1] - sorted_ser[int(h)]) * g)
+
+        self.preds = pd.DataFrame(
+            {'upper_bound' : upper_bounds, 'center' : centers},
+            index = keys
+        )
+
+    def predict(self, X):
+        X = np.array(X)
+        
+        preds = self.preds.loc[list(map(tuple, X))]
+
+        return AnomalyPredictions(
+            center = preds.center.to_numpy(),
+            upper_bound = preds.upper_bound.to_numpy()
+        )
