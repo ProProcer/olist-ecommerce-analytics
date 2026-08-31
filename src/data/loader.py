@@ -21,6 +21,9 @@ def get_longest_contiguous_seq(a, descending = True):
     return a[: idx ]
 
 def prepare_for_sliding_window_split(train_df, test_df, period_train, timestamp_col, freq):
+    train_df[timestamp_col] = pd.to_datetime(train_df[timestamp_col])
+    test_df[timestamp_col] = pd.to_datetime(test_df[timestamp_col])
+
     test_periods = test_df[timestamp_col].dt.to_period(freq).unique()
     test_periods = get_longest_contiguous_seq(test_periods, descending = False)
     
@@ -31,6 +34,6 @@ def prepare_for_sliding_window_split(train_df, test_df, period_train, timestamp_
     test_df = test_df[test_df[timestamp_col].dt.to_period(freq).isin(test_periods)]
     train_df = train_df[train_df[timestamp_col].dt.to_period(freq).isin(train_periods)] # filter to selected period
 
-    df = pd.concat((train_df, test_df))
+    df = pd.concat((train_df, test_df), ignore_index = True)
     
     return df
