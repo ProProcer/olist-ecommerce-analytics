@@ -6,7 +6,7 @@ from sklearn.base import BaseEstimator
 from typing import Tuple
 
 class GroupEstimator(BaseEstimator):
-    def __init__(self, alpha, min_group_size = 10):
+    def __init__(self, alpha, min_group_size = 100):
         self.alpha = alpha
         self.min_group_size = min_group_size
 
