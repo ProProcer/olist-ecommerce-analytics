@@ -1,7 +1,8 @@
 # @package _global_
 defaults:
 - override /model: boxcox_tscore
+- override /features: dow_seller_state
 - _self_
 
 experiment_name: "handing_days_anomaly_detection"
-run_name: "dow_boxcox_tscore"
+run_name: "dow_seller_state__boxcox_tscore"

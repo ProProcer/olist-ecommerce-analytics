@@ -1,0 +1,7 @@
+# @package _global_
+defaults:
+- override /model: empirical_quantile
+- _self_
+
+experiment_name: "handing_days_anomaly_detection"
+run_name: "dow__empirical_quantile"
