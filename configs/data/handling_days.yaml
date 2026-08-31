@@ -1,4 +1,5 @@
 path: data/processed/handling_days_train.csv
+test_path: data/processed/handling_days_test.csv
 target: handling_days
 timestamp: order_approved_at
 numerical_cols: 

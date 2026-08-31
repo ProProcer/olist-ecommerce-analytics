@@ -1,5 +1,11 @@
 import pandas as pd
-from typing import List
+from typing import List, Callable
+
+def apply_transforms(df, transforms: List[Callable]):
+    df = df.copy()
+    for fn in transforms:
+        df = df.pipe(fn)
+    return df
 
 def parse_datetime(df: pd.DataFrame, cols : List[str]) -> pd.DataFrame:
     for col in cols:
