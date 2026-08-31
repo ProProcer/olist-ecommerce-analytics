@@ -1,5 +1,5 @@
 _target_: src.evaluation.evaluator.MetricEvaluator
-primary_metric: "rmse"
+primary_metric: "alpha_absolute_error"
 greater_is_better: false
 metrics:
   rmse:
@@ -11,3 +11,7 @@ metrics:
   medae:
     _target_: src.evaluation.metrics.medae
     _partial_: true
+  alpha_absolute_error:
+    _target_: src.evaluation.metrics.alpha_absolute_error
+    _partial_: true
+    alpha: "${alpha}"

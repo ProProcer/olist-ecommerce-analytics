@@ -10,3 +10,6 @@ def rmse(y_true : np.ndarray, preds : AnomalyPredictions) -> float:
 
 def medae(y_true : np.ndarray, preds : AnomalyPredictions) -> float:
     return metrics.median_absolute_error(y_true, preds.center)
+
+def alpha_absolute_error(y_true : np.ndarray, preds : AnomalyPredictions, alpha : float = 0.05) -> float:
+    return abs(alpha - outlier_fraction(y_true, preds))

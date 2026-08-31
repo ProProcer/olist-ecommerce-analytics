@@ -11,3 +11,4 @@ defaults:
 
 experiment_name: "handing_days_anomaly_detection"
 run_name: "dow_zscore"
+alpha: 0.05
