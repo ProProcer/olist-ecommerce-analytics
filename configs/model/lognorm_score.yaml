@@ -1,2 +1,2 @@
 _target_: src.models.group.LogNormScore
-alpha: 0.05
+alpha: "${alpha}"
