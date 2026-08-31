@@ -57,6 +57,11 @@ class TScore(GroupEstimator):
         params = ss.t.fit(a)
         return ss.t.ppf(1 - self.alpha, *params)
 
+class LogNormScore(GroupEstimator):
+    def _get_upper_bound(self, a):
+        params = ss.lognorm.fit(a)
+        return ss.lognorm.ppf(1 - self.alpha, *params)
+
 class EmpiricalQuantile(GroupEstimator):
     def _get_upper_bound(self, a):
         h = 1 + (len(a) - 1) * 0.95
