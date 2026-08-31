@@ -7,3 +7,6 @@ def outlier_fraction(y_true : np.ndarray, preds : AnomalyPredictions) -> float:
 
 def rmse(y_true : np.ndarray, preds : AnomalyPredictions) -> float:
     return metrics.root_mean_squared_error(y_true, preds.center)
+
+def medae(y_true : np.ndarray, preds : AnomalyPredictions) -> float:
+    return metrics.median_absolute_error(y_true, preds.center)

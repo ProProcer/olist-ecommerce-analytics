@@ -8,3 +8,6 @@ metrics:
   outlier_fraction:
     _target_: src.evaluation.metrics.outlier_fraction
     _partial_: true
+  medae:
+    _target_: src.evaluation.metrics.medae
+    _partial_: true
