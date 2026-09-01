@@ -1,0 +1,33 @@
+path: data/processed/order_delivery_dataset_train.csv
+test_path: data/processed/order_delivery_dataset_test.csv
+target: transit_days
+timestamp: order_delivered_carrier_date
+numerical_cols: 
+- seller_lat
+- seller_lng
+- customer_lat
+- customer_lng
+- distance_km	
+- item_count
+- volume_m3
+- weight_kg
+- total_price
+- total_freight_value
+- transit_days
+categorical_cols:
+- seller_state
+- customer_state
+transforms:
+- _target_: src.data.transforms.select_columns
+  _partial_: true
+  cols: "${add : ${data.numerical_cols}, ${data.categorical_cols}, [${data.timestamp}]}"
+- _target_: src.data.transforms.parse_datetime
+  _partial_: true
+  cols: ["${data.timestamp}"]
+- _target_: src.data.transforms.cast_dtypes
+  _partial_: true
+  cols: "${data.numerical_cols}"
+  dtype: "float32"
+- _target_ : src.data.transforms.select_strictly_positive_rows
+  _partial_: true
+  cols: ["${data.target}"]

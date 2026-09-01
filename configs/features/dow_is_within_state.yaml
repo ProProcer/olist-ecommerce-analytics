@@ -1,0 +1,19 @@
+_target_: src.features.get_feature_transformer
+
+engineering: 
+  dow: 
+    _target_: src.features.engineering.dow
+    cols: ["${data.timestamp}"]
+  is_within_state:
+    _target_: src.features.engineering.is_equal
+    cols: ["seller_state", "customer_state"]
+encoding:
+  one_hot:
+    _target_: sklearn.preprocessing.OneHotEncoder
+    sparse_output: false
+    drop: first
+    handle_unknown: ignore
+    categories:
+      - [0, 1, 2, 3, 4, 5, 6]  # day of week
+      - [false, true]           # is_within_state
+_convert_: all

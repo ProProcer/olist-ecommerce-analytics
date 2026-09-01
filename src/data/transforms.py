@@ -23,7 +23,7 @@ def select_columns(df : pd.DataFrame, cols : List[str]) -> pd.DataFrame:
 def select_strictly_positive_rows(df : pd.DataFrame, cols : List[str]) -> pd.DataFrame:
     cols = list(cols)
     mask = (df[cols] > 0).all(axis = 1)
-    return df.loc[mask]
+    return df.loc[mask].reset_index(drop = True)
 
 if __name__ == '__main__':
     df = pd.DataFrame({
