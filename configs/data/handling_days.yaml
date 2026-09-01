@@ -1,5 +1,5 @@
-path: data/processed/handling_days_train.csv
-test_path: data/processed/handling_days_test.csv
+path: data/processed/order_delivery_dataset_train.csv
+test_path: data/processed/order_delivery_dataset_test.csv
 target: handling_days
 timestamp: order_approved_at
 numerical_cols: 

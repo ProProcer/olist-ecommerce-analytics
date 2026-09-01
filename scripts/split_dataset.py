@@ -1,4 +1,4 @@
-# python scripts/split_dataset.py --csv_path data/processed/order_delivery_dataset.csv --datetime_column order_approved_at --cutoff_date 01-01-2018 --name handling_days
+# python scripts/split_dataset.py --csv_path data/processed/order_delivery_dataset.csv --datetime_column order_approved_at --cutoff_date 01-01-2018 --name order_delivery_dataset
 import argparse
 import pandas as pd
 
