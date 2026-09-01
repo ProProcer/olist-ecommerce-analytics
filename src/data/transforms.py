@@ -20,6 +20,11 @@ def cast_dtypes(df : pd.DataFrame, cols : List[str], dtype : str) -> pd.DataFram
 def select_columns(df : pd.DataFrame, cols : List[str]) -> pd.DataFrame:
     return df[cols]
 
+def select_strictly_positive_rows(df : pd.DataFrame, cols : List[str]) -> pd.DataFrame:
+    cols = list(cols)
+    mask = (df[cols] > 0).all(axis = 1)
+    return df.loc[mask]
+
 if __name__ == '__main__':
     df = pd.DataFrame({
         'date1' : ['2018-01-01', '2018-01-02'],

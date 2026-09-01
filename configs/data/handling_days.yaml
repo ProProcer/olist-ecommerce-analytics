@@ -28,3 +28,6 @@ transforms:
   _partial_: true
   cols: "${data.categorical_cols}"
   dtype: "category"
+- _target_ : src.data.transforms.select_strictly_positive_rows
+  _partial_: true
+  cols: ["${data.target}"]
