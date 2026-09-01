@@ -8,14 +8,15 @@ import numpy as np
 st.set_page_config(page_title = 'Logistics Performance')
 conn = st.connection('postgresql', type = 'sql')
 
-st.cache_data(ttl = '5m')
 
 freq_map = {
     'Monthly' : {'trunc' : 'month', 'period' : 'M', 'n_months' : 1},
     'Quarterly' : {'trunc' : 'quarter', 'period' : 'Q', 'n_months' : 3},
     'Yearly' : {'trunc' : 'year', 'period' : 'Y', 'n_months' : 12}
 }
-def get_logistics_metrics(freq = 'monthly'):
+
+@st.cache_data(ttl = '5m')
+def get_logistics_metrics(freq = 'Monthly'):
 
     params = freq_map[freq]
 
@@ -45,6 +46,7 @@ def get_logistics_metrics(freq = 'monthly'):
     df.set_index('time_period', inplace = True)
     return df
 
+@st.cache_data(ttl = '5m')
 def get_fct_orders():
     query = f"""
         SELECT * FROM gold.fct_orders
@@ -53,7 +55,7 @@ def get_fct_orders():
     return df
 
 # On time delivery rate figure
-def plot_otd_rate(df, time_period):
+def plot_otd_rate(df, time_period, sampling_freq):
     df['on_time_delivery_perc'] = df['on_time_delivery_rate'] * 100
 
     # categorize the current performance
@@ -86,7 +88,7 @@ def plot_otd_rate(df, time_period):
 
     n_months = freq_map[sampling_freq]['n_months']
 
-    x_ticks = pd.Series(np.concatenate( # prepare for changing xticks (cosmetic)
+    x_ticks = pd.to_datetime(np.concatenate( # prepare for changing xticks (cosmetic)
         (df.timestamp,
         df.timestamp.max() + DateOffset(months = n_months) * np.array([1, 2, 3]))
     ))
@@ -97,7 +99,7 @@ def plot_otd_rate(df, time_period):
             current_timestamp + DateOffset(months = n_months * 2, days = 1/3 * 30 * n_months)
         ),
         tickvals = x_ticks,
-        ticktext = x_ticks.dt.to_period(freq_map[sampling_freq]['period']).astype('str'),
+        ticktext = x_ticks.to_period(freq_map[sampling_freq]['period']).astype('str'),
         fixedrange = True,
         title_text = None
     )
@@ -149,7 +151,9 @@ def plot_otd_rate(df, time_period):
 
     if ((time_period - 1 not in df.index) or
         (df.loc[time_period, 'on_time_delivery_rate'] ==  
-        df.loc[time_period - 1, 'on_time_delivery_rate'])):
+        df.loc[time_period - 1, 'on_time_delivery_rate']) or
+        np.isnan(df.loc[time_period, 'on_time_delivery_rate']) or
+        np.isnan(df.loc[time_period - 1, 'on_time_delivery_rate'])):
         symbol = ''
     elif (df.loc[time_period, 'on_time_delivery_rate'] > 
         df.loc[time_period - 1, 'on_time_delivery_rate']):
@@ -200,7 +204,7 @@ def plot_delivery_time(fct_orders, is_split):
     return delivery_time_fig
 
 def plot_stacked_bar(categories : dict, colors = None):
-    if colors == None:
+    if colors is None:
         colors = px.colors.qualitative.Safe
 
     assert len(categories) <= len(colors)
@@ -252,7 +256,7 @@ time_period = st.selectbox(
 )
 
 
-otd_rate_fig = plot_otd_rate(df, time_period)
+otd_rate_fig = plot_otd_rate(df, time_period, sampling_freq)
 with st.container(border = True):
     st.write(otd_rate_fig)
 
@@ -366,7 +370,7 @@ with col2:
             data_frame = delivery_counts_data, 
             x = 'order_status',
             y = 'count',
-            title = f"Non-Delivered Order Breakdown"
+            title = "Non-Delivered Order Breakdown"
         )
         fig.update_layout(
             height = 350,
