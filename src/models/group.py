@@ -29,7 +29,7 @@ class GroupEstimator(BaseEstimator):
             index = indices
         )
         self.global_center_ = np.mean(y)
-        self.global_upper_bound_ = self._get_upper_bound(group)
+        self.global_upper_bound_ = self._get_upper_bound(y)
 
     def _get_upper_bound(self, a : np.ndarray) -> float:
         raise NotImplementedError()
