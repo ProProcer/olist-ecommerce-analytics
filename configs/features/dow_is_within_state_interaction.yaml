@@ -1,0 +1,7 @@
+_target_: src.features.get_feature_transformer
+
+engineering:
+  dow_is_within_state:
+    _target_: src.features.engineering.dow_is_within_state_design
+    cols: ["${data.timestamp}", "seller_state", "customer_state"]
+_convert_: all
