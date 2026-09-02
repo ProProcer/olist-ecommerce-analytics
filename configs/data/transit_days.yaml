@@ -2,6 +2,7 @@ path: data/processed/order_delivery_dataset_train.csv
 test_path: data/processed/order_delivery_dataset_test.csv
 target: transit_days
 timestamp: order_delivered_carrier_date
+id_col: order_id
 numerical_cols: 
 - seller_lat
 - seller_lng
@@ -20,7 +21,7 @@ categorical_cols:
 transforms:
 - _target_: src.data.transforms.select_columns
   _partial_: true
-  cols: "${add : ${data.numerical_cols}, ${data.categorical_cols}, [${data.timestamp}]}"
+  cols: "${add : ${data.numerical_cols}, ${data.categorical_cols}, [${data.timestamp}, ${data.id_col}]}"
 - _target_: src.data.transforms.parse_datetime
   _partial_: true
   cols: ["${data.timestamp}"]
