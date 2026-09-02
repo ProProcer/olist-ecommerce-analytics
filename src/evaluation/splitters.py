@@ -10,13 +10,21 @@ class SlidingWindowSplitter(BaseCrossValidator):
         self.freq = freq
 
     def _is_contiguous(self, a):
-        return a.isin(min(a) + np.arange(0, len(a))).all()
+        expected_periods = pd.period_range(
+            start=a.min(), periods=len(a), freq=a.freqstr
+        )
+        return a.equals(expected_periods)
 
     def split(self, X : pd.DataFrame, y = None, groups = None):
-        periods = X[self.timestamp].dt.to_period(self.freq).unique()
-        self._is_contiguous(periods)
+        sample_periods = X[self.timestamp].dt.to_period(self.freq)
+        periods = pd.PeriodIndex(sample_periods.unique()).sort_values()
 
-        idx_list = [np.where(X[self.timestamp].dt.to_period(self.freq) == p)[0] for p in periods]
+        if not self._is_contiguous(periods):
+            raise ValueError(
+                f"{self.timestamp!r} must contain contiguous {self.freq!r} periods."
+            )
+
+        idx_list = [np.where(sample_periods == period)[0] for period in periods]
 
         for i in range(self.get_n_splits(X, y, groups)):
             train_idx = np.concatenate(idx_list[i : i + self.period_train])

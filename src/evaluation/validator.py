@@ -45,11 +45,13 @@ class CrossValidator:
         evaluated_idx = []
         
         for train_idx, test_idx in self.splitter.split(df):
-            train_df = df.loc[train_idx]
+            # Splitters yield positional indices, so use iloc even if the input
+            # DataFrame has a non-default index.
+            train_df = df.iloc[train_idx]
             X_train = self.feature_transformer.fit_transform(train_df)
             y_train = train_df[self.target_col]
     
-            test_df = df.loc[test_idx]
+            test_df = df.iloc[test_idx]
             X_test = self.feature_transformer.transform(test_df)
             y_test = test_df[self.target_col]
 
@@ -77,7 +79,9 @@ class CrossValidator:
         }
         y = df[self.target_col]
 
-        oof_metrics = self.evaluator.compute(y[np.unique(evaluated_idx)], pred_class(**filtered_preds_buffer))
+        oof_metrics = self.evaluator.compute(
+            y.iloc[np.unique(evaluated_idx)], pred_class(**filtered_preds_buffer)
+        )
 
         oof_predictions = pred_class(**oof_preds_buffer)
         
