@@ -1,0 +1,8 @@
+# @package _global_
+defaults:
+- override /data: transit_days
+- override /features: dow_is_within_state
+- override /model: linear_regression
+
+experiment_name: "transit_days_anomaly_detection"
+run_name: "dow_is_within_state__mlr"
