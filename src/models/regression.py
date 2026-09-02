@@ -17,7 +17,7 @@ class LinearRegression(BaseEstimator):
         residuals = y - model.predict(X)
         s = np.sqrt(np.sum(residuals**2) / dof)
         self.X_mean_ = np.mean(X, axis=0)
-        X_centered = X - self.X_mean_
+        X_centered = np.asarray(X - self.X_mean_)
 
         self.XTX_inv = np.linalg.pinv(X_centered.T @ X_centered)
         self.model = model
@@ -32,9 +32,9 @@ class LinearRegression(BaseEstimator):
         n = self.n
         dof = self.dof
 
-        center = model.predict(X)
+        center = np.asarray(model.predict(X))
 
-        X_centered = X - self.X_mean_
+        X_centered = np.asarray(X - self.X_mean_)
         leverage = np.sum((X_centered @ self.XTX_inv) * X_centered, axis=1)
         prediction_se = s * np.sqrt(1 + (1 / n) + leverage)
         t_val = stats.t.ppf(1 - self.alpha, dof)

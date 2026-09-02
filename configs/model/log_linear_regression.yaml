@@ -1,0 +1,13 @@
+_target_: src.models.wrappers.TransformedTargetEstimator
+model: 
+  _target_: src.models.regression.LinearRegression
+  alpha: "${alpha}"
+transformer:
+  _target_: sklearn.preprocessing.FunctionTransformer
+  check_inverse: false
+  func:
+    _target_: numpy.log1p
+    _partial_: true
+  inverse_func:
+    _target_: numpy.expm1
+    _partial_: true
