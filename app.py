@@ -4,6 +4,7 @@ import plotly.graph_objects as go
 import pandas as pd
 from pandas.tseries.offsets import DateOffset
 import numpy as np
+from pathlib import Path
 
 st.set_page_config(page_title = 'Logistics Performance')
 conn = st.connection('postgresql', type = 'sql')
@@ -52,7 +53,46 @@ def get_fct_orders():
         SELECT * FROM gold.fct_orders
     """
     df = conn.query(query)
+    df['order_approved_at'] = pd.to_datetime(df['order_approved_at'])
     return df
+
+@st.cache_data
+def get_anomaly_scores():
+    """Load the two final-model OOF exports and assign an order-level status."""
+    project_root = Path(__file__).resolve().parent
+    handling = pd.read_csv(
+        project_root / 'data/processed/oof_predictions_handling_days.csv',
+        usecols=['order_id', 'is_oof_scored', 'is_anomaly']
+    ).rename(columns={
+        'is_oof_scored': 'is_handling_scored',
+        'is_anomaly': 'is_handling_anomaly'
+    })
+    transit = pd.read_csv(
+        project_root / 'data/processed/oof_predictions_transit_days.csv',
+        usecols=['order_id', 'is_oof_scored', 'is_anomaly']
+    ).rename(columns={
+        'is_oof_scored': 'is_transit_scored',
+        'is_anomaly': 'is_transit_anomaly'
+    })
+
+    scores = handling.merge(transit, on='order_id', how='outer', validate='one_to_one')
+    for column in ('is_handling_scored', 'is_transit_scored'):
+        scores[column] = scores[column].astype('boolean').fillna(False).astype(bool)
+    for column in ('is_handling_anomaly', 'is_transit_anomaly'):
+        scores[column] = scores[column].astype('boolean')
+
+    scores['is_oof_scored'] = (
+        scores['is_handling_scored'] & scores['is_transit_scored']
+    )
+    scores['anomaly_category'] = pd.NA
+    scored = scores['is_oof_scored']
+    handling_anomaly = scores['is_handling_anomaly'].fillna(False)
+    transit_anomaly = scores['is_transit_anomaly'].fillna(False)
+    scores.loc[scored & ~handling_anomaly & ~transit_anomaly, 'anomaly_category'] = 'Fine'
+    scores.loc[scored & handling_anomaly & ~transit_anomaly, 'anomaly_category'] = 'Handling anomaly'
+    scores.loc[scored & ~handling_anomaly & transit_anomaly, 'anomaly_category'] = 'Carrier anomaly'
+    scores.loc[scored & handling_anomaly & transit_anomaly, 'anomaly_category'] = 'Both anomalies'
+    return scores[['order_id', 'is_oof_scored', 'anomaly_category']]
 
 # On time delivery rate figure
 def plot_otd_rate(df, time_period, sampling_freq):
@@ -242,6 +282,47 @@ def plot_stacked_bar(categories : dict, colors = None):
     st.html(html_code)
 
 
+def show_delivery_time_composition(orders):
+    """Show how the average delivery time is split between handling and transit."""
+    handling_days = orders.handling_days.mean()
+    transit_days = orders.transit_days.mean()
+    total_delivery_days = orders.total_delivery_days.mean()
+
+    if pd.isna(total_delivery_days) or total_delivery_days <= 0:
+        st.info('Delivery-time composition is unavailable for this selection.')
+        return
+
+    st.markdown('###### Delivery Time Composition')
+    plot_stacked_bar({
+        f'Handling ({handling_days:.1f} days)': handling_days / total_delivery_days,
+        f'Transit ({transit_days:.1f} days)': transit_days / total_delivery_days,
+    })
+
+
+def show_anomaly_proportions(orders):
+    """Display mutually exclusive handling/transit anomaly categories."""
+    categories = ('Fine', 'Handling anomaly', 'Carrier anomaly', 'Both anomalies')
+    colors = ('#59A14F', '#F28E2B', '#4E79A7', '#B07AA1')
+    scored_orders = orders[orders['is_oof_scored'].fillna(False)]
+
+    st.markdown('###### Anomaly Proportion')
+    if scored_orders.empty:
+        st.info('No orders in this selection have OOF anomaly scores.')
+        return
+
+    proportions = scored_orders['anomaly_category'].value_counts(normalize=True)
+    counts = scored_orders['anomaly_category'].value_counts()
+    labels = {
+        f'{category} ({counts.get(category, 0):,}; {proportions.get(category, 0):.1%})':
+        proportions.get(category, 0)
+        for category in categories
+    }
+    plot_stacked_bar(labels, colors=colors)
+    st.caption(
+        f'Based on {len(scored_orders):,} of {len(orders):,} orders with both OOF scores.'
+    )
+
+
 sampling_freq = st.selectbox(
     label = 'Select the Frequency',
     options = ('Monthly', 'Quarterly', 'Yearly')
@@ -260,7 +341,9 @@ otd_rate_fig = plot_otd_rate(df, time_period, sampling_freq)
 with st.container(border = True):
     st.write(otd_rate_fig)
 
-fct_orders = get_fct_orders()
+fct_orders = get_fct_orders().merge(
+    get_anomaly_scores(), on='order_id', how='left', validate='many_to_one'
+)
 fct_orders = fct_orders[
     fct_orders.order_approved_at.dt.to_period(freq_map[sampling_freq]['period']) == time_period
 ]
@@ -281,32 +364,17 @@ with st.container(border = True):
     st.write(delivery_time_fig)
 
     if not st.session_state.is_split_by_on_time:
-        handling_days = fct_orders.handling_days.mean()
-        transit_days = fct_orders.transit_days.mean()
-        total_delivery_days = fct_orders.total_delivery_days.mean()
-        plot_stacked_bar(
-            {f'Handling ({handling_days:.1f} days)' : handling_days / total_delivery_days, 
-             f'Transit ({transit_days:.1f} days)' : transit_days / total_delivery_days}
-        )
+        show_delivery_time_composition(fct_orders)
+        show_anomaly_proportions(fct_orders)
     else:
-        
-        agg_fct_orders = fct_orders.groupby('is_on_time')[['handling_days', 'transit_days', 'total_delivery_days']].mean()
-
-        st.html(f'<span style="font-size:0.85em;">On Time Delivery ({len(fct_orders[fct_orders.is_on_time == 1])} orders)</span>')
-        if 1 in agg_fct_orders.index:        
-            plot_stacked_bar(
-                {f'Handling ({agg_fct_orders.loc[1, 'handling_days']:.1f} days)' : agg_fct_orders.loc[1, 'handling_days'] / agg_fct_orders.loc[1, 'total_delivery_days'], 
-                f'Transit ({agg_fct_orders.loc[1, 'transit_days']:.1f} days)' : agg_fct_orders.loc[1, 'transit_days'] / agg_fct_orders.loc[1, 'total_delivery_days']}
-            )
-
-        st.html(f'<span style="font-size:0.85em;">Late Delivery ({len(fct_orders[fct_orders.is_on_time == 0])} orders)</span>')
-
-        if 0 in agg_fct_orders.index:
-            # Late
-            plot_stacked_bar(
-                {f'Handling ({agg_fct_orders.loc[0, 'handling_days']:.1f} days)' : agg_fct_orders.loc[0, 'handling_days'] / agg_fct_orders.loc[0, 'total_delivery_days'], 
-                f'Transit ({agg_fct_orders.loc[0, 'transit_days']:.1f} days)' : agg_fct_orders.loc[0, 'transit_days'] / agg_fct_orders.loc[0, 'total_delivery_days']}
-            )
+        for is_on_time, title in ((1, 'On-Time Delivery'), (0, 'Late Delivery')):
+            orders = fct_orders[fct_orders.is_on_time == is_on_time]
+            st.markdown(f'##### {title} ({len(orders):,} orders)')
+            if orders.empty:
+                st.info(f'No {title.lower()} orders are available for this selection.')
+                continue
+            show_delivery_time_composition(orders)
+            show_anomaly_proportions(orders)
 
 col1, col2 = st.columns(2)
 
