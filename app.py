@@ -322,21 +322,22 @@ def show_anomaly_proportions(orders):
         f'Based on {len(scored_orders):,} of {len(orders):,} orders with both OOF scores.'
     )
 
+st.title("📦 Marketplace Logistics Dashboard")
+col1, col2 = st.columns(2)
+with col1:
+    sampling_freq = st.selectbox(
+        label = 'Select the Frequency',
+        options = ('Monthly', 'Quarterly', 'Yearly')
+    )
+with col2:
+    df = get_logistics_metrics(sampling_freq)
+    df['timestamp'] = df.index.to_timestamp()
 
-sampling_freq = st.selectbox(
-    label = 'Select the Frequency',
-    options = ('Monthly', 'Quarterly', 'Yearly')
-)
-
-df = get_logistics_metrics(sampling_freq)
-df['timestamp'] = df.index.to_timestamp()
-
-time_period = st.selectbox(
-    label = 'Select Time Period',
-    options = df.index.sort_values(ascending = False)
-)
-
-
+    time_period = st.selectbox(
+        label = 'Select Time Period',
+        options = df.index.sort_values(ascending = False)
+    )
+st.caption("Executive decision support tool for monitoring on-time delivery performance and isolating seller handling vs. carrier transit bottlenecks.")
 otd_rate_fig = plot_otd_rate(df, time_period, sampling_freq)
 with st.container(border = True):
     st.write(otd_rate_fig)
