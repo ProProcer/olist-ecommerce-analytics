@@ -37,14 +37,17 @@ A high-impact operational dashboard must answer three continuous questions:
 2. **Diagnostic:** Why is it happening?
 3. **Prescriptive:** What operational actions are required?
 
-### Core Logistics Metrics & Thresholds
+### Core Logistics Metrics & Operational Modules
 
-| Metric | Business Definition | Target / Baseline | Operational Impact |
-| :--- | :--- | :--- | :--- |
-| **On-Time Delivery (OTD) Rate** | % of orders delivered within estimated SLA | **>95% Winning**<br>90–95% Acceptable<br>**<90% Losing** | Directly drives customer satisfaction, repeat purchases, and dispute rates. |
-| **Seller Dispatch Compliance** | Duration from payment approved to carrier handover (`handling_days`) | Evaluated via anomaly models conditioned on order volume & surface area | Flags non-compliant sellers needing SLA buffer adjustments or merchant ops intervention. |
-| **Carrier Net Transit Time** | Duration from carrier handover to customer delivery (`transit_days`) | Evaluated via regression models conditioned on distance, state corridor, and volume | Identifies failing regional routes and logistics partner underperformance. |
-| **Freight Ratio** | $\frac{\text{Freight Value}}{\text{Product Value} + \text{Freight Value}}$ | **<12% Winning**<br>12–15% Acceptable<br>**>15% Losing** | Balances customer conversion vs. platform margin. |
+The dashboard tracks five core operational modules reflecting the real-time fulfillment health of the marketplace:
+
+| Module | Specific Metric | Operational Definition | Dashboard Benchmark / Behavior | Actionable Insight |
+| :--- | :--- | :--- | :--- | :--- |
+| **SLA Health** | **On-Time Delivery (OTD) Rate** | $\frac{\sum \text{on\_time\_orders}}{\sum \text{total\_orders}} \times 100$ | **>95% Excellent** (Green)<br>90–95% Normal<br>**<90% Underperforming** (Red) | High-level fulfillment pulse; immediately signals when platform delivery promises to customers are breaking down. |
+| **Fulfillment Composition** | **Handling vs. Transit Duration** | Average days in **Handling** (payment approved $\rightarrow$ carrier handover) vs. **Transit** (carrier handover $\rightarrow$ customer delivery) | Stratified by **On-Time** vs. **Late Delivery** cohorts | Dissects delivery cycle time to show whether delays stem from merchant dispatch lag or postal transit times. |
+| **Root-Cause Attribution** | **Anomaly Proportion Engine** | Order distribution across 4 mutually exclusive states: **Fine**, **Handling anomaly**, **Carrier anomaly**, and **Both anomalies** | Model-driven Out-of-Fold (OOF) scoring evaluated against statistical & regression baselines | Eliminates operational guesswork by directly attributing delivery failures to specific merchants or logistics partners. |
+| **Unit Economics** | **Freight Rate Efficiency** | • **Rate by Weight:** $\frac{\sum \text{Freight Value}}{\sum \text{Weight (kg)}}$ ($\text{R\$} / \text{kg}$)<br>• **Rate by Volume:** $\frac{\sum \text{Freight Value}}{\sum \text{Volume (m}^3\text{)}}$ ($\text{R\$} / \text{m}^3$) | Period-over-period delta comparison with inverted cost coloring | Identifies freight cost inflation per unit of physical weight and volume across quarters. |
+| **Pipeline Friction** | **Non-Delivered Order Breakdown** | Count distribution of in-flight and unfulfilled orders (`approved`, `processing`, `invoiced`, `shipped`, `unavailable`, `canceled`) | Non-delivered order count vs. total approved orders (`Count: X / Y`) | Detects backlogs before packages enter the postal network, and monitors cancellation/unavailability rates. |
 
 ---
 
