@@ -1,6 +1,6 @@
 from typing import Dict, Any, Callable
 from omegaconf import DictConfig
-from hydra.utils import instantiate
+from src.utils.hydra import instantiate_unsafe
 from src.schemas.predictions import AnomalyPredictions
 import numpy as np
 
@@ -17,7 +17,7 @@ class MetricEvaluator():
 
         for name, target in metrics.items():
             if isinstance(target, (dict, DictConfig)): 
-                self.metrics[name]  = instantiate(target)
+                self.metrics[name]  = instantiate_unsafe(target)
             else: 
                 self.metrics[name] = target
 

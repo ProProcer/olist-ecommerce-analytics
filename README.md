@@ -83,7 +83,7 @@ flowchart LR
   * **Bronze** (`sql/01_ddl_setup.sql`): raw Olist tables loaded as-is.
   * **Silver** (`sql/02_data_cleaning.sql`): deduplicated, typed, and constraint-enforced tables (PK/FK). Deduplication decisions are justified in `sql/diagnostics.sql`.
   * **Dataset query** (`sql/03_build_order_delivery_dataset.sql`): order-level dataset with geodesic (Haversine) seller–customer distance, package dimensions, and handling/transit/total durations, exported to CSV via `scripts/export_dataset.py`.
-* The dashboard reads the **Gold layer** (`gold.fct_orders`, `gold.monthly_logistics_metrics`) directly from PostgreSQL.
+* The **Gold layer** (`sql/04_build_gold_layer.sql`) builds `gold.fct_orders` (order-level delivery durations and on-time flags) and `gold.monthly_logistics_metrics` (monthly KPIs), which the dashboard reads directly from PostgreSQL.
 
 ### 2. Time-Aware Experimentation & Modeling
 * **Leakage-Free Validation:** Logistics data suffers from temporal autocorrelation and seasonality. We employ a **monthly sliding-window cross-validation** scheme (3 training months, 1 test month per fold) to evaluate models sequentially without lookahead bias and produce Out-of-Fold (OOF) scores.
@@ -122,6 +122,7 @@ flowchart LR
 ├── evaluate.py                # Holdout test-split evaluation runner
 ├── notebook/                  # Modeling exploration notebooks (handling & transit days)
 ├── outputs/                   # Generated Hydra run artifacts (gitignored)
+├── requirements.txt           # Python dependencies
 ├── scripts/                   # Automation scripts
 │   ├── export_dataset.py      # Export SQL dataset query to CSV
 │   ├── split_dataset.py       # Temporal train/test split
@@ -131,6 +132,7 @@ flowchart LR
 │   ├── 01_ddl_setup.sql       # Bronze: raw table DDL
 │   ├── 02_data_cleaning.sql   # Silver: cleaning, deduplication, constraints
 │   ├── 03_build_order_delivery_dataset.sql  # Order-level dataset query
+│   ├── 04_build_gold_layer.sql  # Gold: fct_orders & monthly_logistics_metrics
 │   └── diagnostics.sql        # Queries justifying cleaning decisions
 ├── src/                       # Production Python package
 │   ├── data/                  # Data loaders and transforms
@@ -154,15 +156,21 @@ git clone https://github.com/ProProcer/olist-ecommerce-analytics.git
 cd olist-ecommerce-analytics
 
 # Install dependencies
-pip install hydra-core omegaconf mlflow pandas numpy scipy scikit-learn \
-    sqlalchemy psycopg2-binary python-dotenv streamlit plotly
+pip install -r requirements.txt
 ```
 
 ### 2. Prepare the Data (PostgreSQL)
 ```bash
-# Load raw CSVs into the bronze schema, then clean into silver
+# Download the raw CSVs from Kaggle (Brazilian E-Commerce Public Dataset by Olist):
+#   https://www.kaggle.com/datasets/olistbr/brazilian-ecommerce
+# Place them in data/raw/, then create the bronze tables and load the CSVs into them
 psql -d olist_ecommerce -f sql/01_ddl_setup.sql
+
+# Clean into the silver schema
 psql -d olist_ecommerce -f sql/02_data_cleaning.sql
+
+# Build the gold layer consumed by the dashboard
+psql -d olist_ecommerce -f sql/04_build_gold_layer.sql
 
 # Export the order-level dataset (requires DB_URL in .env)
 python scripts/export_dataset.py \
@@ -197,8 +205,8 @@ mlflow ui --backend-store-uri sqlite:///mlflow.db
 
 ### 4. Export OOF Anomaly Scores for the Dashboard
 ```bash
-python scripts/export_oof_predictions.py experiment=final_handling
-python scripts/export_oof_predictions.py experiment=final_transit
+python -m scripts.export_oof_predictions experiment=final_handling
+python -m scripts.export_oof_predictions experiment=final_transit
 ```
 
 ### 5. Launch Operations Dashboard

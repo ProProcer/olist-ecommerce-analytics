@@ -1,7 +1,7 @@
 import hydra
 from omegaconf import DictConfig
 from src.data.loader import load_data
-from hydra.utils import instantiate, UNSAFE_ALLOW_ALL_TARGETS
+from src.utils.hydra import instantiate_unsafe
 from src.utils.resolvers import register_custom_resolvers
 
 @hydra.main(config_path="configs", config_name="config")
@@ -10,11 +10,11 @@ def main(cfg: DictConfig):
 
     df = load_data(cfg.data)
     
-    validator = instantiate(cfg.validator, _target_whitelist_ = UNSAFE_ALLOW_ALL_TARGETS)
+    validator = instantiate_unsafe(cfg.validator)
 
     result = validator.run(df) 
 
-    tracker = instantiate(cfg.tracker, _target_whitelist_ = UNSAFE_ALLOW_ALL_TARGETS)
+    tracker = instantiate_unsafe(cfg.tracker)
     tracker.log_run(
         run_name = cfg.run_name, 
         config = cfg, 

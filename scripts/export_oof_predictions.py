@@ -1,7 +1,7 @@
 import hydra
 from omegaconf import DictConfig, OmegaConf
 from src.data.loader import load_data
-from hydra.utils import instantiate, UNSAFE_ALLOW_ALL_TARGETS
+from src.utils.hydra import instantiate_unsafe
 from src.utils.resolvers import register_custom_resolvers
 import pandas as pd
 import numpy as np
@@ -21,7 +21,7 @@ def main(cfg: DictConfig):
     if id_col not in df:
         raise KeyError(f"Configured ID column {id_col!r} is not present in the data.")
     
-    validator = instantiate(cfg.validator, _target_whitelist_ = UNSAFE_ALLOW_ALL_TARGETS)
+    validator = instantiate_unsafe(cfg.validator)
 
     result = validator.run(df) 
 

@@ -9,4 +9,8 @@ def add(*args):
     return result
 
 def register_custom_resolvers():
-    OmegaConf.register_resolver('add', add, replace = True)
+    register = getattr(OmegaConf, 'register_new_resolver', OmegaConf.register_resolver)
+    try:
+        register('add', add, replace = True)
+    except TypeError:
+        register('add', add)

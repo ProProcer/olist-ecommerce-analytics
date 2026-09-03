@@ -8,7 +8,7 @@ numerical_cols:
 - seller_lng
 - customer_lat
 - customer_lng
-- distance_km	
+- distance_km
 - item_count
 - volume_m3
 - weight_kg

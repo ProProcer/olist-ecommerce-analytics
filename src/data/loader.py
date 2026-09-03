@@ -1,17 +1,17 @@
 import pandas as pd
 import numpy as np
-from hydra.utils import instantiate, UNSAFE_ALLOW_ALL_TARGETS
 from src.data.transforms import apply_transforms
+from src.utils.hydra import instantiate_unsafe
 
 def load_data(cfg):
     df = pd.read_csv(cfg.path)
-    return apply_transforms(df, instantiate(cfg.transforms, _target_whitelist_ = UNSAFE_ALLOW_ALL_TARGETS))
+    return apply_transforms(df, instantiate_unsafe(cfg.transforms))
 
 def load_test_data(cfg_data, cfg_split):
     train_df = pd.read_csv(cfg_data.path)
     test_df = pd.read_csv(cfg_data.test_path)
     df = prepare_for_sliding_window_split(train_df, test_df, cfg_split.period_train, cfg_data.timestamp, cfg_split.freq)
-    return apply_transforms(df, instantiate(cfg_data.transforms, _target_whitelist_ = UNSAFE_ALLOW_ALL_TARGETS))
+    return apply_transforms(df, instantiate_unsafe(cfg_data.transforms))
 
 def get_longest_contiguous_seq(a, descending = True):
     step = -1 if descending else 1
