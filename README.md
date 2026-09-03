@@ -56,40 +56,48 @@ The dashboard tracks five core operational modules reflecting the real-time fulf
 ```mermaid
 flowchart LR
     subgraph Data["1. Data Engineering (PostgreSQL)"]
-        Raw[(Raw Olist Tables)] --> Clean[Data Cleaning & Standardization]
-        Clean --> DimFact[(Gold Layer / Dimensional & Fact Orders)]
+        Raw[(Raw Olist CSVs)] --> Bronze[Bronze Layer: DDL & Load]
+        Bronze --> Silver[Silver Layer: Cleaning & Deduplication]
+        Silver --> Export[Order Delivery Dataset CSV]
+        Silver --> Gold[(Gold Layer: fct_orders & monthly_logistics_metrics)]
     end
 
-    subgraph Modeling["2. Modeling & Experimentation"]
-        DimFact --> Features[Feature Engineering: DOW, Distance, Corridors]
-        Features --> Split[Temporal Sliding-Window Cross Validation]
-        Split --> ML[Decoupled Anomaly Models\n- Handling: Box-Cox Z-Score\n- Transit: Multiple Linear Regression]
+    subgraph Modeling["2. Modeling & Experimentation (Python)"]
+        Export --> Split[Temporal Train/Test Split]
+        Split --> Features[Feature Engineering: DOW, Seller State, Corridor]
+        Features --> CV[Monthly Sliding-Window Cross-Validation]
+        CV --> ML[Decoupled Anomaly Models\n- Handling: Box-Cox Z-Score\n- Transit: Multiple Linear Regression]
         ML --> MLflow[(MLflow Experiment Tracking)]
         ML --> OOF[Out-of-Fold Anomaly Scoring]
     end
 
     subgraph UI["3. Operations UI (Streamlit)"]
-        DimFact --> App[Streamlit Control Center]
+        Gold --> App[Streamlit Control Center]
         OOF --> App
         App --> Exec[COO Decision Support & Attribution]
     end
 ```
 
 ### 1. Data Engineering & Layered SQL
-* Structured PostgreSQL schema with DDL definitions, rigorous data cleaning, and business fact/dimensional tables (`gold.fct_orders`, `gold.monthly_logistics_metrics`).
-* Computes geospatial geodesic distance between seller and customer zip code coordinates.
+* Structured PostgreSQL pipeline with DDL definitions and rigorous data cleaning:
+  * **Bronze** (`sql/01_ddl_setup.sql`): raw Olist tables loaded as-is.
+  * **Silver** (`sql/02_data_cleaning.sql`): deduplicated, typed, and constraint-enforced tables (PK/FK). Deduplication decisions are justified in `sql/diagnostics.sql`.
+  * **Dataset query** (`sql/03_build_order_delivery_dataset.sql`): order-level dataset with geodesic (Haversine) seller–customer distance, package dimensions, and handling/transit/total durations, exported to CSV via `scripts/export_dataset.py`.
+* The dashboard reads the **Gold layer** (`gold.fct_orders`, `gold.monthly_logistics_metrics`) directly from PostgreSQL.
 
 ### 2. Time-Aware Experimentation & Modeling
-* **Leakage-Free Validation:** Logistics data suffers from temporal autocorrelation and seasonality. We employ a **monthly sliding-window cross-validation** scheme to evaluate models sequentially without lookahead bias.
+* **Leakage-Free Validation:** Logistics data suffers from temporal autocorrelation and seasonality. We employ a **monthly sliding-window cross-validation** scheme (3 training months, 1 test month per fold) to evaluate models sequentially without lookahead bias and produce Out-of-Fold (OOF) scores.
 * **Decoupled Anomaly Detection:**
-  * **Handling Duration:** Modeled via group-stratified Box-Cox transformed Z-scores and empirical quantiles conditioned on seller state and dispatch day-of-week.
-  * **Carrier Transit Duration:** Modeled via multiple linear regression (MLR) incorporating geographic distance, within-state vs. interstate logistics corridors, and dimensional package attributes.
-* **Experiment Management:** Fully modularized configurations using **Hydra** (`configs/`) with automated metric logging to **MLflow** (`mlflow.db`).
-* **Out-of-Fold (OOF) Inference:** Predictions generated out-of-fold are exported to `data/processed/` for downstream integration into operational dashboards.
+  * **Handling Duration (final model):** Box-Cox transformed Z-scores, stratified by **seller state and dispatch day-of-week** groups, flagging orders above the group-specific upper bound. Benchmarked against t-score, lognormal, and empirical-quantile baselines in both grouped and day-of-week-only variants.
+  * **Carrier Transit Duration (final model):** Multiple linear regression on **dispatch day-of-week and within-state corridor indicators**, with t-distribution prediction intervals for anomaly thresholds. Log-transformed target and day-of-week × corridor interaction variants were also explored.
+* **Evaluation Metrics:** Alpha absolute error (primary), RMSE, median absolute error, and outlier fraction — logged per fold, as cross-validation mean/std, and on OOF predictions.
+* **Experiment Management:** Fully modularized configurations using **Hydra** (`configs/`) with automated metric and config-artifact logging to **MLflow** (`mlflow.db`).
+* **Holdout Evaluation:** `evaluate.py` re-runs the chosen models on the temporally separated test split (retraining on the 3 months preceding the test window) and logs results under a `_test` suffix.
+* **Out-of-Fold (OOF) Inference:** Predictions generated out-of-fold are exported by `scripts/export_oof_predictions.py` to `data/processed/` for downstream integration into the operational dashboard.
 
 ### 3. Application Layer
-* High-performance dashboard built with **Streamlit** and **Plotly**.
-* Provides single-click cohort switching (Monthly, Quarterly, Yearly) and a **Split View** comparing On-Time vs. Late delivery cohorts.
+* Dashboard built with **Streamlit** and **Plotly**, querying PostgreSQL through `st.connection`.
+* Provides single-click cohort switching (Monthly, Quarterly, Yearly) and a **Split View** comparing On-Time vs. Late delivery cohorts, with delivery-time composition and anomaly attribution per cohort.
 
 ---
 
@@ -97,32 +105,41 @@ flowchart LR
 
 ```
 ├── app.py                     # Streamlit operations dashboard
-├── assets/                    # Screenshots, demo GIF, and video assets
-│   ├── dashboard_preview.png
-│   ├── dashboard_demo.gif
-│   └── dashboard_demo.mp4
+├── assets/                    # Dashboard screenshots and demo recording assets
 ├── configs/                   # Hydra hierarchical configuration system
 │   ├── config.yaml            # Base experiment config
 │   ├── data/                  # Dataset definitions (handling_days, transit_days)
-│   ├── experiment/            # Experiment overrides (boxcox, quantiles, MLR)
-│   ├── features/              # Feature sets
-│   ├── model/                 # Model architectures
-│   └── split/                 # Temporal sliding window splitters
-├── data/                      # Local data directory (raw and processed OOF scores)
-├── evaluate.py                # Evaluation runner for test splits
-├── notebook/                  # Exploratory and prototyping notebooks
-├── scripts/                   # Automation scripts (export OOF, run all experiments)
-├── sql/                       # PostgreSQL DDL, cleaning scripts, and marts
-│   ├── 01_ddl_setup.sql
-│   ├── 02_data_cleaning.sql
-│   └── 03_build_order_delivery_dataset.sql
+│   ├── evaluator/             # Evaluation metric configurations
+│   ├── experiment/            # Experiment overrides (baselines + final_handling / final_transit)
+│   ├── features/              # Feature sets (dow, dow_seller_state, corridor, interaction)
+│   ├── model/                 # Model architectures (zscore, tscore, quantile, MLR, log-MLR...)
+│   ├── split/                 # Temporal sliding-window splitter
+│   ├── tracker/               # MLflow and console tracking configurations
+│   └── validator/             # Cross-validator configuration
+├── data/
+│   ├── raw/                   # Original Olist CSVs
+│   └── processed/             # Delivery dataset, temporal train/test splits, OOF scores
+├── evaluate.py                # Holdout test-split evaluation runner
+├── notebook/                  # Modeling exploration notebooks (handling & transit days)
+├── outputs/                   # Generated Hydra run artifacts (gitignored)
+├── scripts/                   # Automation scripts
+│   ├── export_dataset.py      # Export SQL dataset query to CSV
+│   ├── split_dataset.py       # Temporal train/test split
+│   ├── export_oof_predictions.py  # Export OOF scores for the dashboard
+│   └── run_all_experiments.sh # Run default + every experiment config
+├── sql/                       # PostgreSQL pipeline
+│   ├── 01_ddl_setup.sql       # Bronze: raw table DDL
+│   ├── 02_data_cleaning.sql   # Silver: cleaning, deduplication, constraints
+│   ├── 03_build_order_delivery_dataset.sql  # Order-level dataset query
+│   └── diagnostics.sql        # Queries justifying cleaning decisions
 ├── src/                       # Production Python package
-│   ├── data/                  # Data loaders and schemas
-│   ├── evaluation/            # Custom evaluation metrics
+│   ├── data/                  # Data loaders and transforms
+│   ├── evaluation/            # Cross-validator, splitters, custom metrics
 │   ├── features/              # Feature engineering pipelines
-│   ├── models/                # Statistical & ML estimators
-│   ├── tracking/              # MLflow integration utilities
-│   └── utils/                 # Resolvers and helpers
+│   ├── models/                # Group estimators, MLR with prediction intervals, wrappers
+│   ├── schemas/               # Prediction and validation result dataclasses
+│   ├── tracking/              # MLflow and console trackers
+│   └── utils/                 # Hydra resolvers and helpers
 └── train.py                   # Hydra training entrypoint
 ```
 
@@ -137,23 +154,55 @@ git clone https://github.com/ProProcer/olist-ecommerce-analytics.git
 cd olist-ecommerce-analytics
 
 # Install dependencies
-pip install -r requirements.txt
+pip install hydra-core omegaconf mlflow pandas numpy scipy scikit-learn \
+    sqlalchemy psycopg2-binary python-dotenv streamlit plotly
 ```
 
-### 2. Run Modeling Experiments (Hydra + MLflow)
+### 2. Prepare the Data (PostgreSQL)
 ```bash
-# Run default experiment
-python train.py
+# Load raw CSVs into the bronze schema, then clean into silver
+psql -d olist_ecommerce -f sql/01_ddl_setup.sql
+psql -d olist_ecommerce -f sql/02_data_cleaning.sql
 
-# Run a specific experiment override
+# Export the order-level dataset (requires DB_URL in .env)
+python scripts/export_dataset.py \
+    -i sql/03_build_order_delivery_dataset.sql \
+    -o data/processed/order_delivery_dataset.csv
+
+# Temporal train/test split (cutoff 2018-01-01)
+python scripts/split_dataset.py \
+    --csv_path data/processed/order_delivery_dataset.csv \
+    --datetime_column order_approved_at \
+    --cutoff_date 01-01-2018 \
+    --name order_delivery_dataset
+```
+
+### 3. Run Modeling Experiments (Hydra + MLflow)
+```bash
+# Run the default experiment, or a specific experiment override
+python train.py
 python train.py experiment=final_handling
 python train.py experiment=final_transit
+
+# Evaluate the chosen models on the holdout test split
+python evaluate.py experiment=final_handling
+python evaluate.py experiment=final_transit
+
+# Run the default config plus every experiment config
+bash scripts/run_all_experiments.sh
 
 # Launch MLflow UI to view experiment runs
 mlflow ui --backend-store-uri sqlite:///mlflow.db
 ```
 
-### 3. Launch Operations Dashboard
+### 4. Export OOF Anomaly Scores for the Dashboard
+```bash
+python scripts/export_oof_predictions.py experiment=final_handling
+python scripts/export_oof_predictions.py experiment=final_transit
+```
+
+### 5. Launch Operations Dashboard
+The dashboard connects to a PostgreSQL database containing the `gold.fct_orders` and `gold.monthly_logistics_metrics` tables; connection settings live in `.streamlit/secrets.toml`.
 ```bash
 streamlit run app.py
 ```
