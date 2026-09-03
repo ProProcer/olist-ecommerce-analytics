@@ -104,6 +104,9 @@ flowchart LR
 ## 📁 Repository Structure
 
 ```
+├── .env.example               # Template for local DB credentials (copy to .env)
+├── .streamlit/
+│   └── secrets.toml.example   # Template for dashboard DB connection (copy to secrets.toml)
 ├── app.py                     # Streamlit operations dashboard
 ├── assets/                    # Dashboard screenshots and demo recording assets
 ├── configs/                   # Hydra hierarchical configuration system
@@ -173,6 +176,7 @@ psql -d olist_ecommerce -f sql/02_data_cleaning.sql
 psql -d olist_ecommerce -f sql/04_build_gold_layer.sql
 
 # Export the order-level dataset (requires DB_URL in .env)
+cp .env.example .env   # then fill in your PostgreSQL credentials
 python scripts/export_dataset.py \
     -i sql/03_build_order_delivery_dataset.sql \
     -o data/processed/order_delivery_dataset.csv
@@ -212,5 +216,6 @@ python -m scripts.export_oof_predictions experiment=final_transit
 ### 5. Launch Operations Dashboard
 The dashboard connects to a PostgreSQL database containing the `gold.fct_orders` and `gold.monthly_logistics_metrics` tables; connection settings live in `.streamlit/secrets.toml`.
 ```bash
+cp .streamlit/secrets.toml.example .streamlit/secrets.toml   # then fill in your credentials
 streamlit run app.py
 ```
