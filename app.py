@@ -337,7 +337,7 @@ with col2:
         label = 'Select Time Period',
         options = df.index.sort_values(ascending = False)
     )
-st.caption("Executive decision support tool for monitoring on-time delivery performance and isolating seller handling vs. carrier transit bottlenecks.")
+
 otd_rate_fig = plot_otd_rate(df, time_period, sampling_freq)
 with st.container(border = True):
     st.write(otd_rate_fig)
