@@ -1,4 +1,8 @@
-/data
+/data/*
+!/data/processed/
+/data/processed/*
+!/data/processed/oof_predictions_handling_days.csv
+!/data/processed/oof_predictions_transit_days.csv
 .streamlit/secrets.toml
 .env
 .vscode
