@@ -4,6 +4,8 @@
 
 ![Marketplace Logistics Dashboard Preview](assets/dashboard_preview.png)
 
+> **🚀 [View the Live Interactive Dashboard](https://olist-ecommerce-analytics-xusvsnyynjlph7vdjlzku4.streamlit.app/)**
+
 ---
 
 ## 🎯 Executive Summary & The Operational Problem
@@ -23,6 +25,8 @@ Global delivery metrics conflate these two phases. This project provides an **en
 ## 🖥️ Interactive Operations Dashboard
 
 The Streamlit decision-support application allows operations executives to monitor high-level SLA health, inspect delivery time compositions, and isolate handling vs. carrier anomalies across different time horizons.
+
+👉 **Live app:** https://olist-ecommerce-analytics-xusvsnyynjlph7vdjlzku4.streamlit.app/
 
 ![Dashboard Interactive Demo](assets/dashboard_demo.gif)
 
